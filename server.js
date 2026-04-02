@@ -40,7 +40,7 @@ const STRATEGY = {
   rsiOverbought: 70,
   emaFast:     50,
   emaSlow:     200,
-  checkIntervalMs: 60 * 60 * 1000, // every 1 hour
+  checkIntervalMs: 5 * 60 * 1000, // every 5 minutes
 };
 
 // ── STATE ────────────────────────────────────────────────────
