@@ -1,0 +1,62 @@
+// ============================================================
+// ForexAI Strategy — RSI + EMA Trend Follower
+// Paste this into TradingView Pine Script editor
+// Set alerts to fire webhook to your Railway URL
+// ============================================================
+
+//@version=5
+strategy("ForexAI — RSI + EMA", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=1)
+
+// ── INPUTS ───────────────────────────────────────────────────
+rsiLen    = input.int(14, "RSI Period")
+rsiOS     = input.int(30, "RSI Oversold")
+rsiOB     = input.int(70, "RSI Overbought")
+emaFast   = input.int(50, "EMA Fast")
+emaSlow   = input.int(200, "EMA Slow")
+
+// ── INDICATORS ───────────────────────────────────────────────
+rsi    = ta.rsi(close, rsiLen)
+ema50  = ta.ema(close, emaFast)
+ema200 = ta.ema(close, emaSlow)
+
+// ── TREND FILTER ─────────────────────────────────────────────
+bullTrend = ema50 > ema200
+bearTrend = ema50 < ema200
+
+// ── SIGNALS ──────────────────────────────────────────────────
+buySignal  = ta.crossover(rsi, rsiOS)  and bullTrend and close > ema50
+sellSignal = ta.crossunder(rsi, rsiOB) and bearTrend and close < ema50
+
+// ── ALERTS (these fire the webhook) ──────────────────────────
+// Set each alert's webhook message to the JSON below
+// Replace YOUR_SECRET with your WEBHOOK_SECRET env var
+
+// BUY alert message (copy into TradingView alert):
+// {"secret":"YOUR_SECRET","pair":"{{ticker}}","action":"BUY","timeframe":"{{interval}}","reason":"RSI oversold + EMA uptrend","rsi":"{{plot_0}}","trend":"bullish"}
+
+// SELL alert message (copy into TradingView alert):
+// {"secret":"YOUR_SECRET","pair":"{{ticker}}","action":"SELL","timeframe":"{{interval}}","reason":"RSI overbought + EMA downtrend","rsi":"{{plot_0}}","trend":"bearish"}
+
+alertcondition(buySignal,  "ForexAI BUY",  "BUY signal triggered")
+alertcondition(sellSignal, "ForexAI SELL", "SELL signal triggered")
+
+// ── STRATEGY ENTRIES (for backtesting in TradingView) ────────
+if buySignal
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Long Exit", "Long", profit=40, loss=20)
+
+if sellSignal
+    strategy.entry("Short", strategy.short)
+    strategy.exit("Short Exit", "Short", profit=40, loss=20)
+
+// ── VISUALS ──────────────────────────────────────────────────
+plot(ema50,  "EMA 50",  color=color.new(color.blue, 0),   linewidth=1)
+plot(ema200, "EMA 200", color=color.new(color.orange, 0), linewidth=2)
+
+plotshape(buySignal,  "BUY",  shape.labelup,   location.belowbar, color.new(color.green, 0), text="AI BUY",  textcolor=color.white, size=size.small)
+plotshape(sellSignal, "SELL", shape.labeldown, location.abovebar, color.new(color.red, 0),   text="AI SELL", textcolor=color.white, size=size.small)
+
+// RSI panel
+hline(rsiOS, "Oversold",  color.new(color.green, 50), linestyle=hline.style_dashed)
+hline(rsiOB, "Overbought",color.new(color.red, 50),   linestyle=hline.style_dashed)
+plot(rsi, "RSI", color=color.new(color.purple, 0), display=display.pane)
